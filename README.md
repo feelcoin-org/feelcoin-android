@@ -1,115 +1,72 @@
-# Feelcoin Desktop Wallet 🪙
+# Feelcoin Android Wallet 🪙
 
-**Official Feelcoin (FEEL) desktop wallet — Windows & Linux**
+**Official Feelcoin (FEEL) Android wallet — Public Beta**
 
-**Current release:** [v0.1.0 Alpha (pre-release)](https://github.com/feelcoin-org/feelcoin-desktop/releases/tag/v0.1.0-alpha) · **Network:** Feelcoin Mainnet · **Architecture:** x86-64
+**Version:** v0.2.0 Beta · **Network:** Feelcoin Mainnet · **Platform:** Android
 
-> **Alpha warning:** This is experimental software. Back up your recovery seed securely and offline before using the wallet. Test with small amounts. Do not share your seed, wallet password, or private keys.
+> **Beta notice:** This wallet is experimental and has not undergone an independent security audit. Start with small amounts and securely back up your recovery seed offline. Never share your seed, private keys, or wallet password.
 
-## Download
+## Download and install
 
-| Platform | Package | Download |
-| --- | --- | --- |
-| Windows 10/11 x64 | NSIS installer (`.exe`) | [Windows installer](https://github.com/feelcoin-org/feelcoin-desktop/releases/download/v0.1.0-alpha/Feelcoin-Desktop-v0.1.0-alpha-windows-x64-setup.exe) |
-| Linux x86-64 | AppImage | [Linux AppImage](https://github.com/feelcoin-org/feelcoin-desktop/releases/download/v0.1.0-alpha/Feelcoin-Desktop-v0.1.0-alpha-linux-x86_64.AppImage) |
-| Debian / Ubuntu x86-64 | DEB | [Linux DEB](https://github.com/feelcoin-org/feelcoin-desktop/releases/download/v0.1.0-alpha/Feelcoin-Desktop-v0.1.0-alpha-linux-amd64.deb) |
+**[Download the latest Android Beta APK from GitHub Releases](https://github.com/feelcoin-org/feelcoin-android/releases)**
 
-[Release notes and all assets](https://github.com/feelcoin-org/feelcoin-desktop/releases/tag/v0.1.0-alpha) · [SHA256 checksums](https://github.com/feelcoin-org/feelcoin-desktop/releases/download/v0.1.0-alpha/SHA256SUMS.txt)
+1. Open the Releases page and choose the latest Android Beta release.
+2. Download the signed `.apk` and the accompanying `SHA256SUMS.txt`.
+3. Verify the APK checksum (on Linux: `sha256sum -c SHA256SUMS.txt` from the download directory).
+4. Install the APK on your Android device. Android may ask for permission to install from the app you used to open the APK.
+5. Create a new wallet or restore an existing FEEL wallet, and **back up your seed securely offline**.
 
-### Install on Windows
+**Updates:** Install new versions from official releases. Do not uninstall or clear existing wallet app data unless you have verified your recovery backup. APK upgrades require a compatible signing certificate.
 
-1. Download the official Windows x64 setup `.exe` from the release page.
-2. Verify its SHA-256 hash against the release's `SHA256SUMS.txt`.
-3. Run the installer and open **Feelcoin Desktop**.
-4. Create a new wallet or open an existing wallet, then allow the local daemon to synchronize.
+## Beta features
 
-This Alpha build is not advertised as code-signed. Do not disable Windows Defender or other security protections to run it. Report any detection or installer error.
+- Create and recover FEEL wallets.
+- Password-encrypted local wallet storage and on-device key generation.
+- Send and receive FEEL; sign transactions on the device.
+- Synchronize blockchain balances and transaction history using official Feelcoin network services.
+- Show received and sent transactions with FEEL amounts and transaction hashes.
+- Manual wallet refresh and synchronization status.
+- Read-only mining pool statistics: hashrate, workers, unpaid balance and historical payouts.
+- Blockchain explorer and network information.
+- Dark, Light and System appearance options.
 
-### Install on Linux
+The Android wallet does **not** require running a local blockchain daemon or miner.
 
-**AppImage** (portable):
+## Security and limitations
 
-```bash
-chmod +x Feelcoin-Desktop-v0.1.0-alpha-linux-x86_64.AppImage
-./Feelcoin-Desktop-v0.1.0-alpha-linux-x86_64.AppImage
-```
+- **Self-custody:** Wallet creation, recovery and signing run locally on your device. Protect your recovery seed.
+- **Remote services:** Blockchain data and transaction submission use Feelcoin network services. Network connectivity does not guarantee that the wallet has fully synchronized.
+- **Beta software:** Features have undergone device testing, but reliability, recovery, transaction handling and security still need broader validation.
+- **Small transfers first:** Verify the destination and fee before sending. Confirm transfers through the explorer.
+- **Privacy:** Do not post seeds, private keys, passwords or sensitive wallet diagnostic data in public issues.
+- **No security audit:** Do not use this beta as the sole storage for substantial funds.
 
-**Debian / Ubuntu**:
+Please report reproducible issues on [GitHub Issues](https://github.com/feelcoin-org/feelcoin-android/issues), without including wallet secrets.
 
-```bash
-sudo apt install ./Feelcoin-Desktop-v0.1.0-alpha-linux-amd64.deb
-```
+## For developers
 
-On systems without AppImage/FUSE support, the AppImage may also support `--appimage-extract-and-run`.
+The Android app is built using **Tauri, Rust, React and TypeScript**, with bundled FEEL wallet WASM components.
 
-### Verify downloads
-
-Download `SHA256SUMS.txt` into the same directory as your package.
-
-Linux:
-
-```bash
-sha256sum -c SHA256SUMS.txt --ignore-missing
-```
-
-Windows PowerShell:
-
-```powershell
-Get-FileHash .\Feelcoin-Desktop-v0.1.0-alpha-windows-x64-setup.exe -Algorithm SHA256
-```
-
-Compare the printed Windows hash with the matching line in `SHA256SUMS.txt`.
-
-## Alpha features
-
-- Local Feelcoin daemon and wallet RPC components bundled with the application.
-- Wallet creation and opening, balance refresh, send and receive tools.
-- Network status, block height, peer count and daemon health information.
-- Open-source desktop application built with **Tauri, Rust, React and TypeScript**.
-- Windows installer and Linux AppImage/DEB distribution.
-
-### Alpha limitations
-
-Build success does not guarantee every wallet operation is validated on all systems. Windows testing has confirmed that the application launches and the local node reports peers and blockchain data; wallet creation, synchronization completeness, balance accuracy and transaction flows require further community testing. A daemon-reported target height of zero is not by itself proof that synchronization is complete.
-
-Do not use this Alpha to safeguard substantial funds. Keep independent offline backups of wallet recovery material.
-
-## Security
-
-- **Self-custody:** Keep your recovery seed and wallet keys under your control.
-- **No bundled miner:** This wallet does not package mining software or silently mine.
-- **No antivirus bypass:** We do not advise turning off endpoint protection.
-- **Verified build assets:** Published installers/packages are accompanied by SHA-256 checksums.
-- **Open source:** Inspect the code and submit reproducible bugs.
-
-**Never** send a recovery seed, private view/spend key, or wallet password in an issue, email, or chat.
-
-## Network defaults
-
-| Service | Port |
-| --- | --- |
-| P2P | `35780` |
-| Daemon RPC | `35781` |
-| ZMQ | `35782` |
-| Wallet RPC | `35784` |
-
-## Development
-
-Node.js 20+, stable Rust and the prerequisites for Tauri 2 are required.
+To work with the source, install the dependencies required by Tauri 2 for Android (including Node.js, Rust, Java, Android SDK and NDK). Then:
 
 ```bash
 npm install
-npm run tauri dev
+npm run build
+npm run tauri android build -- --apk
 ```
 
-## Official links
+The Android release APK produced by the build process is unsigned until signed with your own Android signing key. **The official signing keystore is not included in this repository.**
 
-- [Feelcoin website](https://feelcoin.org)
-- [Feelcoin Core](https://github.com/feelcoin-org/feelcoin)
-- [Desktop Alpha release](https://github.com/feelcoin-org/feelcoin-desktop/releases/tag/v0.1.0-alpha)
-- [Report an issue](https://github.com/feelcoin-org/feelcoin-desktop/issues)
+## Related Feelcoin projects
 
-**License:** BSD 3-Clause — see [LICENSE](LICENSE).
+- [Official website](https://feelcoin.org)
+- [Feelcoin core blockchain](https://github.com/feelcoin-org/feelcoin)
+- [Feelcoin desktop wallet — Windows & Linux](https://github.com/feelcoin-org/feelcoin-desktop)
+- [Official mining pool](https://pool.feelcoin.org)
+- [Block explorer](https://explorer.feelcoin.org)
+- [Android Beta releases](https://github.com/feelcoin-org/feelcoin-android/releases)
+
+**License:** See [LICENSE](LICENSE).
 
 ---
 

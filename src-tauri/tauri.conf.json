@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Feelcoin Desktop",
+  "version": "0.1.0",
+  "identifier": "org.feelcoin.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Feelcoin Desktop",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 980,
+        "minHeight": 660,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Finance",
+    "shortDescription": "Official Feelcoin desktop wallet",
+    "longDescription": "Official open-source desktop wallet for Feelcoin with local daemon support and transparent network controls."
+  }
+}

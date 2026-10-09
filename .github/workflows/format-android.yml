@@ -1,0 +1,30 @@
+name: Format Android Rust Changes
+on:
+  push:
+    branches: [feature/android-wallet]
+    paths: ['.github/workflows/format-android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/android-wallet
+          persist-credentials: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format Rust sources
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
+      - name: Commit formatting if needed
+        run: |
+          if ! git diff --quiet; then
+            git config user.name 'feelcoin-dev'
+            git config user.email 'support@feelcoin.org'
+            git add src-tauri
+            git commit -m 'style(android): format Rust pool monitor code'
+            git push origin HEAD:feature/android-wallet
+          fi

@@ -1,0 +1,42 @@
+.fm-wallet-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:15px 0}
+.fm-wallet-modes button{min-width:0;border:1px solid rgba(222,182,99,.25);padding:12px 5px;background:#131d2b;color:#b4bcc8;border-radius:10px;font-size:12px;font-weight:700}
+.fm-wallet-modes button.active{background:linear-gradient(135deg,#fbe0a2,#d8a444);color:#1c1510}
+.fm-wallet-form{display:grid;gap:9px}
+.fm-wallet-form label{font-size:12px;color:#b0b7c5;margin-top:9px}
+.fm-wallet-form input,.fm-wallet-form textarea,.fm-wallet-form select{min-width:0;width:100%;border:1px solid rgba(223,176,84,.29);border-radius:10px;background:#0b1320;color:#f0e6d2;font-size:14px;line-height:1.5;padding:12px;outline:none}
+.fm-wallet-form input:focus,.fm-wallet-form textarea:focus,.fm-wallet-form select:focus{border-color:#f2c56c}
+.fm-wallet-form textarea{resize:vertical;overflow-wrap:anywhere}
+.fm-wallet-engine{font-size:11px!important;color:#9bddb1!important}
+.fm-wallet-warning{color:#f3d6a1!important}
+.fm-recovery-phrase{padding:16px;line-height:2;border:1px solid #b99452;background:#111925;border-radius:12px;font-size:17px;letter-spacing:.3px;overflow-wrap:anywhere;user-select:text}
+.fm-wallet-check{display:flex;align-items:center;gap:8px;margin-top:18px;font-size:12px;line-height:1.5}
+.fm-wallet-check input{width:18px;height:18px;flex-shrink:0;accent-color:#cf9f4f}
+.fm-wallet-message{color:#f7d8a5!important;font-size:12px!important;margin:14px 0 0;overflow-wrap:anywhere}
+.fm-wallet .fm-address{line-height:1.8;word-break:break-all}
+
+/* Wallet sync, transaction history and long hash layout */
+.fm-refresh-btn{width:auto!important;min-width:0;white-space:normal;overflow-wrap:anywhere;padding:7px 10px!important;font-size:12px!important}
+.fm-wallet-message,#sendMessage,.fm-history-hash{overflow-wrap:anywhere!important;word-break:break-word!important;white-space:normal!important;max-width:100%!important;min-width:0!important}
+.fm-history{min-width:0;max-width:100%;overflow:hidden}
+.fm-history-item{min-width:0;max-width:100%;padding:12px 0;border-bottom:1px solid rgba(160,160,160,.2)}
+.fm-history-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:7px;font-size:12px}
+.fm-history-head span,.fm-history-note{opacity:.72;font-size:11px}
+.fm-history-amount{font-weight:700;font-size:15px;margin:7px 0}
+.fm-history-hash{font-size:11px;line-height:1.6;user-select:text}
+
+/* Four-button Feelcoin wallet toolbar */
+.fm-wallet-modes {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+}
+
+.fm-wallet-modes button {
+  min-width: 0;
+  padding: 13px 3px;
+  font-size: clamp(9px, 2.5vw, 12px);
+  white-space: nowrap;
+}
+
+.fm-wallet-modes .fm-refresh-tab:disabled {
+  opacity: .55;
+}

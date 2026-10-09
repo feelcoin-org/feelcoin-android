@@ -1,0 +1,113 @@
+name: Build Android Beta Test APK
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/android-wallet
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'docs/ANDROID_ALPHA.md'
+      - '.github/workflows/android-alpha.yml'
+      - 'package.json'
+      - 'scripts/**'
+permissions:
+  contents: read
+jobs:
+  android:
+    name: ARM64 Android test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Inspect preinstalled Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n1)"
+          test -x "$SDKMANAGER"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          "$SDKMANAGER" --version
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+      - name: Prepare Android NDK
+        run: |
+          if [ -d "$ANDROID_NDK_LATEST_HOME" ]; then
+            echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+            echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          else
+            sdkmanager --install "ndk;27.2.12479018"
+            echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+            echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          fi
+      - name: Install JavaScript dependencies
+        run: npm install
+      - name: Checkout pinned official Feelcoin wallet crypto engine
+        uses: actions/checkout@v4
+        with:
+          repository: feelcoin-org/feelcoin-web-wallet
+          ref: 4cbbbdd5ea5de120ecbc8de5e57410b5b11462a5
+          path: wallet-source
+          persist-credentials: false
+      - name: Bundle verified local WASM wallet engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p public/wallet-core
+          js='wallet-source/public/wasm/MyMoneroCoreCpp_WASM.js'
+          wasm='wallet-source/public/wasm/MyMoneroCoreCpp_WASM.wasm'
+          test -s "$js"
+          test -s "$wasm"
+          test "$(git hash-object "$js")" = '425cdbefeba8d46afc7c7d7d8c2e518c023ccd07'
+          test "$(git hash-object "$wasm")" = '1cec3548d6e83cc70bbb2f21009d07711cbc5194'
+          node scripts/prepare-android-wallet-core.cjs
+          timeout 50s node scripts/smoke-android-wallet-core.cjs
+          echo "Pinned offline crypto engine has generated and recovered a real FEEL test wallet."
+      - name: Preserve pinned crypto engine for offline diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feelcoin-android-crypto-core-diagnostics
+          path: public/wallet-core/*
+          if-no-files-found: ignore
+          retention-days: 2
+      - name: Verify TypeScript and UI
+        run: |
+          npm run build
+          test -s dist/wallet-core/MyMoneroCoreCpp_WASM.js
+          test -s dist/wallet-core/MyMoneroCoreCpp_WASM.wasm
+      - name: Initialize Android target
+        run: npx tauri android init --ci
+      - name: Generate Android launcher icons from official Feelcoin logo
+        run: npx tauri icon public/feelcoin-logo.png --fit contain
+      - name: Verify generated Feelcoin Android launcher resources
+        run: |
+          set -euo pipefail
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            for icon in ic_launcher.png ic_launcher_round.png ic_launcher_foreground.png; do
+              test -s "src-tauri/gen/android/app/src/main/res/mipmap-${density}/${icon}"
+            done
+          done
+          echo "Official Feelcoin launcher resources exist for every Android density."
+          sha256sum src-tauri/gen/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+      - name: Build ARM64 debug APK
+        run: npx tauri android build --debug --apk --target aarch64
+      - name: Verify APK artifact exists
+        run: find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' -print -quit | grep -q apk
+      - name: Upload APK for device testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: feelcoin-android-arm64-beta-test
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 14

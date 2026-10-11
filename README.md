@@ -1,5 +1,9 @@
 # Feelcoin Android Wallet 🪙
 
+<p align="center">
+  <a href="https://feelcoin.org"><img src="https://feelcoin.org/assets/feelcoin-logo-v2.png" alt="Official Feelcoin logo" width="144"></a>
+</p>
+
 **Official Feelcoin (FEEL) Android wallet — Public Beta**
 
 **Version:** v0.2.0 Beta · **Network:** Feelcoin Mainnet · **Platform:** Android

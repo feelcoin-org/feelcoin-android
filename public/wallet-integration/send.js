@@ -827,9 +827,12 @@
     const mixOuts = [];
 
 
-    for (
-      const unused of usingOuts
-    ) {
+    // Different inputs can retrieve their own gamma-sampled decoys concurrently.
+    // Each input keeps its own uniqueness checks and unchanged ring size.
+    let nextInput = 0;
+    const processInput = async () => {
+      while (nextInput < usingOuts.length) {
+        const inputIndex = nextInput++;
 
       const outputs = [];
       const usedIndices =
@@ -952,16 +955,18 @@
       }
 
 
-      mixOuts.push({
+      mixOuts[inputIndex] = {
         amount:
           "0",
 
         outputs
-      });
+      };
 
-    }
-
-
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(3, usingOuts.length) }, () => processInput())
+    );
     return mixOuts;
   }
 
@@ -1214,7 +1219,26 @@
      NON-CUSTODIAL TRANSACTION
      ========================================================= */
 
-  async function sendFeel() {
+  async function sendFeel(options = {}) {
+    // Diagnostic labels and elapsed times only. Never log wallet material,
+    // recipients, decoy indices or serialized transactions.
+    const startedAt = performance.now();
+    let stageStart = startedAt;
+    let previousStage = null;
+    const notifyStage = (phase) => {
+      const now = performance.now();
+      try {
+        options?.onStage?.({
+          phase,
+          elapsedMs: Math.round(now - startedAt),
+          previousPhase: previousStage,
+          previousStageMs: Math.round(now - stageStart)
+        });
+      } catch { /* UI callback cannot interrupt signing */ }
+      previousStage = phase;
+      stageStart = now;
+    };
+    notifyStage("Checking transaction inputs");
 
     const runtime =
       window.FeelcoinWalletRuntime;
@@ -1386,6 +1410,7 @@
     }
 
 
+    notifyStage("Loading network fee");
     const feeReply =
       await api(
         "/api/chain/fee"
@@ -1471,6 +1496,7 @@
     }
 
 
+    notifyStage("Selecting transaction inputs");
     const step1 =
       parseCoreResult(
         core
@@ -1524,6 +1550,7 @@
       );
 
 
+    notifyStage("Fetching ring decoys");
     const mixOuts =
       await buildMixOuts(
         step1.using_outs,
@@ -1547,6 +1574,7 @@
     }
 
 
+    notifyStage("Preparing privacy ring");
     const tiedMixOuts =
       parseCoreResult(
         core
@@ -1590,6 +1618,7 @@
       );
 
 
+    notifyStage("Awaiting your confirmation");
     const confirmed =
       confirm(
         `Send ${$("sendAmount").value} FEEL?\n\n` +
@@ -1604,6 +1633,15 @@
       return;
     }
 
+    // FEELCOIN_SEND_PRECHECK_V3_SELECTED_INPUTS
+    // The transaction builder now knows its exact inputs. Verify these
+    // on the live blockchain *after* confirmation, before local signing.
+    // Fail closed if validation is unavailable; never bypass spending safety.
+    if (typeof options?.validateSelectedInputs !== "function") {
+      throw new Error("Required live selected-input verification is unavailable");
+    }
+    notifyStage("Verifying selected inputs");
+    await options.validateSelectedInputs({usingOuts:step1.using_outs});
 
     const step2Args = {
 
@@ -1681,6 +1719,9 @@
      * local WebAssembly signer here.
      * They are never included in fetch().
      */
+    notifyStage("Signing locally");
+    // Let the Android WebView render the stage before synchronous WASM signing.
+    await new Promise(resolve => setTimeout(resolve, 0));
     const signed =
       parseCoreResult(
         core
@@ -1738,6 +1779,7 @@
      */
     // LIVE MODE: only the already signed transaction blob is submitted.
     // No wallet keys or seed are transmitted. Broadcast is NOT retried automatically.
+    notifyStage("Broadcasting signed transaction");
     const broadcast = await api(
       "/api/chain/broadcast-live",
       { method: "POST", body: JSON.stringify({ tx_as_hex: txHex }) }
@@ -1745,6 +1787,7 @@
     if (broadcast.broadcasted !== true || (broadcast.status && broadcast.status !== "OK")) {
       throw new Error(broadcast.reason || broadcast.error || broadcast.status || "The live Feelcoin node did not accept this transaction");
     }
+    notifyStage("Transaction submitted");
     if (
       $("sendMessage")
     ) {

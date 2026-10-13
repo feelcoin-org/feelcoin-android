@@ -40,3 +40,28 @@
 .fm-wallet-modes .fm-refresh-tab:disabled {
   opacity: .55;
 }
+
+/* FEELCOIN_X_WALLET_V2 */
+.fm .fm-wallet-modes button{font-weight:750!important;font-size:clamp(10px,2.6vw,12px)!important}
+.fm .fm-recovery-phrase{background:var(--fx-card);color:var(--fx-text);border-color:var(--fx-accent)}
+.fm .fm-wallet-message{color:var(--fx-accent)!important}
+.fm .fm-wallet .fm-address{color:var(--fx-text)!important}
+
+/* FEELCOIN_WALLET_SYNC_V2 — read-only, verified scan status */
+.fm .fm-sync-card{padding:19px!important}
+.fm .fm-sync-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.fm .fm-sync-heading strong{font-size:15px;font-weight:750}
+.fm .fm-sync-badge{border-radius:999px;border:1px solid var(--fx-line);color:var(--fx-muted);font-size:11px;padding:5px 9px;white-space:nowrap}
+.fm .fm-sync-badge.good{color:var(--fx-accent);border-color:var(--fx-accent)}
+.fm .fm-sync-percent{display:flex;align-items:baseline;gap:12px;margin-top:19px;font-size:30px;letter-spacing:-.04em;font-weight:800;font-variant-numeric:tabular-nums;color:var(--fx-text)}
+.fm .fm-sync-percent small{font-size:12px;font-weight:450;letter-spacing:0;color:var(--fx-muted)}
+.fm .fm-sync-track{height:9px;border-radius:999px;background:var(--fx-line);overflow:hidden;margin:13px 0 16px}
+.fm .fm-sync-track>div{height:100%;border-radius:999px;background:var(--fx-accent);transition:width .28s ease}
+.fm .fm-sync-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px 11px}
+.fm .fm-sync-stats>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fm .fm-sync-stats span{font-size:11px;color:var(--fx-muted)}
+.fm .fm-sync-stats strong{font-size:13px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;color:var(--fx-text)}
+.fm .fm-sync-note,.fm .fm-sync-meta{color:var(--fx-muted)!important;font-size:12px!important;line-height:1.6;margin:14px 0!important}
+.fm .fm-sync-retry{padding:9px 16px!important;font-size:12px!important;max-width:100%}
+.fm .fm-sync-retry:disabled{opacity:.45;cursor:not-allowed}
+@media(prefers-reduced-motion:reduce){.fm .fm-sync-track>div{transition:none}}

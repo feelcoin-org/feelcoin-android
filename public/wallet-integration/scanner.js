@@ -1007,13 +1007,63 @@
   }
 
 
+  // FEELCOIN_OUTPUT_INTEGRITY_V1
+  // Never trust duplicate outputs in a persisted checkpoint. An output is
+  // identified by its on-chain transaction position, and when available by
+  // its global output index + key. No wallet secrets are logged or exported.
+  function assertUniqueWalletOutputs(outputs) {
+    if (!Array.isArray(outputs)) return;
+    const positions = new Set();
+    const globalKeys = new Set();
+    for (const output of outputs) {
+      if (!output || typeof output !== "object") {
+        throw new Error("WALLET_OUTPUT_INTEGRITY_INVALID");
+      }
+      const txid = String(output.txid || "").toLowerCase();
+      const index = Number(output.index);
+      if (/^[0-9a-f]{64}$/.test(txid) && Number.isSafeInteger(index) && index >= 0) {
+        const position = txid + ":" + index;
+        if (positions.has(position)) throw new Error("WALLET_OUTPUT_DUPLICATE");
+        positions.add(position);
+      }
+      const key = String(output.outputPublicKey || "").toLowerCase();
+      const global = output.globalIndex;
+      if (/^[0-9a-f]{64}$/.test(key) &&
+          (typeof global === "number" || typeof global === "string") &&
+          /^(0|[1-9][0-9]*)$/.test(String(global))) {
+        const identity = BigInt(String(global)).toString() + ":" + key;
+        if (globalKeys.has(identity)) throw new Error("WALLET_OUTPUT_DUPLICATE");
+        globalKeys.add(identity);
+      }
+    }
+  }
+
+  function hasDuplicateWalletOutputs(outputs) {
+    try {
+      assertUniqueWalletOutputs(outputs);
+      return false;
+    } catch (error) {
+      if (error?.message === "WALLET_OUTPUT_DUPLICATE" ||
+          error?.message === "WALLET_OUTPUT_INTEGRITY_INVALID") return true;
+      throw error;
+    }
+  }
+
   async function scanWallet({
     core,
     wallet,
     previousResult = null,
     onProgress = () => {},
-    onCheckpoint = () => {}
+    onCheckpoint = () => {},
+    onPhase = () => {},
+    forceVerify = false
   }) {
+    // FEELCOIN_SYNC_V4: stage timings contain only durations, no wallet data.
+    const beganAt = Date.now();
+    let heightMs = 0;
+    let tipMs = 0;
+    let blocksMs = 0;
+    let verificationMs = 0;
     if (!core) {
       throw new Error(
         "Feelcoin WASM core is not loaded"
@@ -1029,6 +1079,10 @@
       Number(
         health.height || 0
       );
+    heightMs = Date.now() - beganAt;
+    if (!Number.isSafeInteger(chainHeight) || chainHeight <= 0 || health.synchronized === false) {
+      throw new Error("Feelcoin node height is unavailable or not synchronized");
+    }
 
     const keys =
       walletKeys(wallet);
@@ -1096,8 +1150,20 @@
           ?.scannedHeight
       );
 
+    // Validate the complete cached output set BEFORE the V4 fast path can
+    // reuse it. Duplicate outputs can inflate balances and confuse input
+    // selection. Rebuild from restore height rather than suppressing errors.
+    const invalidPreviousOutputs = !!previousResult && (
+      hasDuplicateWalletOutputs(previousResult.ownedOutputs) ||
+      hasDuplicateWalletOutputs(previousResult.unlockedOutputs)
+    );
+    if (invalidPreviousOutputs) {
+      console.warn("Wallet checkpoint output integrity failed. Rebuilding scan from restore height.");
+    }
+
     const previousUsable =
       !!previousResult &&
+      !invalidPreviousOutputs &&
       Number.isSafeInteger(
         previousHeight
       ) &&
@@ -1132,6 +1198,7 @@
         previousHeight > 0
       ) {
 
+        const tipStartedAt = Date.now();
         try {
 
           const previousTip =
@@ -1180,9 +1247,30 @@
           chainStillMatches =
             false;
         }
-
+        tipMs = Date.now() - tipStartedAt;
       }
 
+      // On an unchanged, independently confirmed chain tip, a COMPLETED
+      // saved wallet scan can be reused. A partial checkpoint cannot.
+      // This skips coinbase index resolution, all spent-status batches and
+      // another large IndexedDB checkpoint write on routine 30s polling.
+      if (!forceVerify && chainStillMatches && previousHeight === chainHeight &&
+          previousResult?.verified === true &&
+          previousResult.restoreHeight === keys.restoreHeight &&
+          /^[0-9a-f]{64}$/i.test(String(previousResult.lastBlockHash || "")) &&
+          typeof previousResult.unlockedBalance === "bigint" &&
+          (typeof previousResult.balance === "bigint" ||
+            (previousResult.watchOnly === true && previousResult.balance === null)) &&
+          Array.isArray(previousResult.unspent) &&
+          Array.isArray(previousResult.unlockedOutputs) &&
+          Array.isArray(previousResult.history)) {
+        return {
+          ...previousResult,
+          fastPath: true,
+          timings: {heightMs, tipMs, blocksMs: 0, verificationMs: 0,
+            totalMs: Date.now() - beganAt}
+        };
+      }
 
       if (chainStillMatches) {
 
@@ -1262,6 +1350,8 @@
 
     let scannedHeight =
       start;
+    const blocksStartedAt = Date.now();
+    if (start < chainHeight) onPhase("scanning");
 
     for (
       let batchStart = start;
@@ -1546,6 +1636,14 @@
       );
     }
 
+    blocksMs = Date.now() - blocksStartedAt;
+    const verificationStartedAt = Date.now();
+    onPhase("verifying");
+
+    // A fresh scan MUST be unique before it is marked verified or written
+    // as an authoritative checkpoint. Failure keeps sending disabled.
+    assertUniqueWalletOutputs(ownedOutputs);
+
     /* =========================================================
        COINBASE GLOBAL INDEX RESOLUTION
 
@@ -1556,6 +1654,7 @@
        outputs can later be used as real spendable inputs.
        ========================================================= */
 
+    const coinbaseStartedAt = Date.now();
     const unresolvedCoinbaseOutputs =
       ownedOutputs.filter(
         output =>
@@ -1682,6 +1781,9 @@
     }
 
 
+    const coinbaseMs = Date.now() - coinbaseStartedAt;
+    const spentStartedAt = Date.now();
+    let spentBatches = 0;
     /*
      * AUTHORITATIVE SPENT-STATUS CHECK
      *
@@ -1701,6 +1803,9 @@
       const queryable =
         ownedOutputs.filter(
           output =>
+            // Confirmed spent outputs cannot become available while the
+            // previous chain tip remains valid. Mempool spends may disappear.
+            (output.spent !== true || output.spentInPool === true) &&
             /^[0-9a-f]{64}$/i.test(
               String(
                 output.keyImage || ""
@@ -1712,17 +1817,13 @@
       const STATUS_BATCH = 100;
 
 
-      for (
-        let offset = 0;
-        offset < queryable.length;
-        offset += STATUS_BATCH
-      ) {
-
-        const outputs =
-          queryable.slice(
-            offset,
-            offset + STATUS_BATCH
-          );
+      let nextOffset = 0;
+      const verifyBatch = async () => {
+        while (nextOffset < queryable.length) {
+          const offset = nextOffset;
+          nextOffset += STATUS_BATCH;
+          const outputs = queryable.slice(offset, offset + STATUS_BATCH);
+          spentBatches += 1;
 
 
         const response =
@@ -1789,11 +1890,10 @@
           const output =
             outputs[i];
 
-          const status =
-            Number(
-              data.spent_status[i]
-            );
-
+          const status = Number(data.spent_status[i]);
+          if (![0, 1, 2].includes(status)) {
+            throw new Error("Invalid wallet-output spent status");
+          }
 
           output.spentStatus =
             status;
@@ -1825,11 +1925,17 @@
 
         }
 
-      }
-
+        }
+      };
+      // Bounded concurrency reduces serial network latency without omitting
+      // any output-status validation. All batches must succeed.
+      await Promise.all(Array.from(
+        { length: Math.min(3, Math.ceil(queryable.length / STATUS_BATCH)) },
+        () => verifyBatch()
+      ));
     }
 
-
+    const spentStatusMs = Date.now() - spentStartedAt;
     const unspent =
       ownedOutputs.filter(
         output =>
@@ -1858,6 +1964,8 @@
           output.unlocked
       );
 
+    assertUniqueWalletOutputs(unlockedOutputs);
+
     const unlockedBalance =
       unlockedOutputs.reduce(
         (sum, output) =>
@@ -1881,7 +1989,13 @@
         (b.timestamp - a.timestamp)
     );
 
+    verificationMs = Date.now() - verificationStartedAt;
     return {
+      verified: true,
+      fastPath: false,
+      timings: {heightMs, tipMs, blocksMs, verificationMs,
+        coinbaseMs, spentStatusMs, spentBatches,
+        totalMs: Date.now() - beganAt},
       chainHeight,
       scannedHeight,
 

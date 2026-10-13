@@ -1,6 +1,8 @@
+declare global { interface Window { FeelcoinSystemBars?: { setDarkMode: (dark: boolean) => void } } }
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import {invoke} from "@tauri-apps/api/core";
 import "./mobile.css";
+import "@fontsource-variable/inter";
 import MobileWallet from "./MobileWallet";
 type Tab="wallet"|"mining"|"explorer"|"network"|"settings";
 type Stats={pool_hashrate?:number;network_hashrate?:number;network_height?:number;connected_miners?:number;pool_fee?:number;miner_hashrate?:number;miner_balance?:number;miner_total_paid?:number;worker_count?:number};
@@ -27,12 +29,21 @@ const ICONS:Record<Tab,string>={wallet:"◈",mining:"⛏",explorer:"▤",network
 type FeelTheme = "system" | "dark" | "light";
 const THEME_KEY = "feelcoin.android.appearance.v1";
 function readTheme(): FeelTheme {
- try { const value = localStorage.getItem(THEME_KEY); return value === "dark" || value === "light" || value === "system" ? value : "dark"; }
+ try { const value = localStorage.getItem(THEME_KEY); return value === "dark" || value === "light" || value === "system" ? value : "system"; }
  catch { return "system"; }
 }
 export default function MobileApp(){
  const [tab,setTab]=useState<Tab>("wallet");
  const [theme,setTheme]=useState<FeelTheme>(readTheme);
+ const [prefersDark,setPrefersDark]=useState(()=>window.matchMedia?.("(prefers-color-scheme: dark)").matches??true);
+ useEffect(()=>{const media=window.matchMedia("(prefers-color-scheme: dark)");const handler=()=>setPrefersDark(media.matches);media.addEventListener("change",handler);return()=>media.removeEventListener("change",handler);},[]);
+ const darkOn=theme==="dark"||(theme==="system"&&prefersDark);
+ const toggleTheme=()=>setTheme(darkOn?"light":"dark");
+ // FEELCOIN_NATIVE_STATUS_BAR_V2: Android bridge receives only a boolean.
+ // Light theme => dark system-bar icons; dark theme => light icons.
+ useEffect(()=>{
+   try { window.FeelcoinSystemBars?.setDarkMode(darkOn); } catch { /* native bridge unavailable in browser */ }
+ },[darkOn]);
  useEffect(()=>{
   const el=document.documentElement;
   el.setAttribute("data-feel-theme",theme);
@@ -122,7 +133,7 @@ export default function MobileApp(){
  function open(url:string){void invoke("mobile_open_link",{url}).catch(()=>setError("Could not open this link."));}
  const hasMiner=!!address&&!!stats;
  return <div className="fm">
-  <header className="fm-header"><div className="fm-brand"><img alt="Official Feelcoin logo" src="/feelcoin-logo.png"/><div><b>FEELCOIN</b><small>ANDROID BETA</small></div></div><span className="fm-pill" title="Official Feelcoin blockchain connectivity. Wallet synchronization is separate."><i style={{background:chain?"#69d6a1":"#e7aa62"}}/>{networkChecking && !chainUpdated ? "CONNECTING..." : chain ? "NETWORK CONNECTED" : "NETWORK DISCONNECTED"}</span></header>
+  <header className="fm-header"><div className="fm-brand"><img alt="Official Feelcoin logo" src="/feelcoin-logo.png"/><div><b>FEELCOIN</b><small>ANDROID BETA</small></div></div><div className="fm-header-actions"><button type="button" className="fm-theme-switch" role="switch" aria-checked={darkOn} aria-label="Dark mode" title={darkOn?"Switch to light mode":"Switch to dark mode"} onClick={toggleTheme}><span className="fm-switch-track"><span className="fm-switch-thumb">{darkOn?"☾":"☀"}</span></span></button><span className="fm-pill" title="Official Feelcoin blockchain connectivity. Wallet synchronization is separate."><i style={{background:chain?"#69d6a1":"#e7aa62"}}/>{networkChecking && !chainUpdated ? "CONNECTING..." : chain ? "NETWORK CONNECTED" : "NETWORK DISCONNECTED"}</span></div></header>
   <main className="fm-main">
    {tab==="mining"&&<>
     <p className="fm-kicker">POOL NETWORK • REMOTE WORKERS</p><h1>Pool <em>Stats.</em></h1><p className="fm-lead">Monitor your mining rigs remotely. No mining runs on your phone.</p>
@@ -222,7 +233,7 @@ export default function MobileApp(){
     <button className="fm-outline-button" disabled={chainLoading||loading} onClick={()=>{void refresh();void refreshChain();}}>{chainLoading||loading?"Refreshing…":"↻ Refresh network"}</button>
     <button className="fm-link" onClick={()=>open(explorerURL)}>Official explorer ↗</button>
    </>}
-   {tab==="settings"&&<><p className="fm-kicker">YOUR APP</p><h1>App <em>Settings.</em></h1><section className="fm-card fm-appearance"><b>Appearance</b><p>Follow your phone theme, or choose a look for Feelcoin.</p><div className="fm-theme-controls" role="group" aria-label="Wallet appearance">{(["system","dark","light"] as FeelTheme[]).map(x=><button key={x} type="button" className={theme===x?"active":""} aria-pressed={theme===x} onClick={()=>setTheme(x)}>{x==="system"?"System default":x==="dark"?"Dark":"Light"}</button>)}</div></section><section className="fm-card fm-row"><div><b>Foreground auto-refresh</b><p>Update pool data every 30 seconds while the app is open.</p></div><input aria-label="Automatic refresh" type="checkbox" checked={auto} onChange={e=>setAuto(e.target.checked)}/></section><section className="fm-card"><b>Saved monitoring address</b><p className="fm-address fm-wrap">{address||"None"}</p><button className="fm-outline-button" onClick={()=>{localStorage.removeItem(STORAGE);setAddress("");setDraft("");setEditing(true);setTab("mining");}}>Forget public address</button></section><section className="fm-card"><b>Android Beta — Wallet Security</b><p>Wallet creation, recovery, and transaction signing are performed locally on your device using the bundled FEEL wallet engine. Blockchain synchronization and live transaction broadcasting are supported through the official Feelcoin network services. This is beta software. Keep your recovery seed securely backed up and use small test transactions until reliability and security testing are complete.</p></section><button className="fm-link" onClick={()=>open("https://feelcoin.org")}>Visit official website ↗</button><button className="fm-link" onClick={()=>open("https://github.com/feelcoin-org/feelcoin-desktop")}>View source on GitHub ↗</button></>}
+   {tab==="settings"&&<><p className="fm-kicker">YOUR APP</p><h1>App <em>Settings.</em></h1><section className="fm-card fm-appearance"><b>Appearance</b><p>Follow your phone theme, or choose a look for Feelcoin.</p><div className="fm-appearance-row"><span>{darkOn?"Dark mode":"Light mode"}</span><button type="button" className="fm-theme-switch" role="switch" aria-checked={darkOn} aria-label="Dark mode" onClick={toggleTheme}><span className="fm-switch-track"><span className="fm-switch-thumb">{darkOn?"☾":"☀"}</span></span></button></div><label className="fm-device-appearance"><input type="checkbox" checked={theme==="system"} onChange={e=>setTheme(e.target.checked?"system":darkOn?"dark":"light")}/> Follow device appearance</label></section><section className="fm-card fm-row"><div><b>Foreground auto-refresh</b><p>Update pool data every 30 seconds while the app is open.</p></div><input aria-label="Automatic refresh" type="checkbox" checked={auto} onChange={e=>setAuto(e.target.checked)}/></section><section className="fm-card"><b>Saved monitoring address</b><p className="fm-address fm-wrap">{address||"None"}</p><button className="fm-outline-button" onClick={()=>{localStorage.removeItem(STORAGE);setAddress("");setDraft("");setEditing(true);setTab("mining");}}>Forget public address</button></section><section className="fm-card"><b>Android Beta — Wallet Security</b><p>Wallet creation, recovery, and transaction signing are performed locally on your device using the bundled FEEL wallet engine. Blockchain synchronization and live transaction broadcasting are supported through the official Feelcoin network services. This is beta software. Keep your recovery seed securely backed up and use small test transactions until reliability and security testing are complete.</p></section><button className="fm-link" onClick={()=>open("https://feelcoin.org")}>Visit official website ↗</button><button className="fm-link" onClick={()=>open("https://github.com/feelcoin-org/feelcoin-desktop")}>View source on GitHub ↗</button></>}
    {error&&<p className="fm-error" role="status">{error}</p>}
   </main><nav className="fm-tabs" aria-label="App navigation">{(["wallet","mining","explorer","network","settings"] as Tab[]).map(x=><button key={x} className={tab===x?"active":""} aria-current={tab===x?"page":undefined} onClick={()=>setTab(x)}><span>{ICONS[x]}</span><small>{x==="mining"?"Pool Stats":x.charAt(0).toUpperCase()+x.slice(1)}</small></button>)}</nav>
  </div>;

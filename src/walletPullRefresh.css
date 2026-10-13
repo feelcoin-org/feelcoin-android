@@ -1,0 +1,26 @@
+/* Feelcoin Android pull-to-refresh. Appearance follows official X wallet theme. */
+.fm .fm-ptr-indicator{
+  position:fixed;
+  z-index:9;
+  top:calc(env(safe-area-inset-top, 0px) + 75px);
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  max-width:calc(100vw - 32px);
+  padding:10px 16px;
+  border:1px solid var(--fx-line, rgba(0,0,0,.12));
+  border-radius:999px;
+  background:var(--fx-card,#ffffff);
+  color:var(--fx-text,#121212);
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
+  font:600 12px/1.4 Inter,system-ui,sans-serif;
+  white-space:nowrap;
+  pointer-events:none;
+}
+.fm .fm-ptr-arrow{font-size:20px;line-height:1;color:var(--fx-accent,#bb9650)}
+.fm .fm-ptr-spinner{width:16px;height:16px;border:2px solid var(--fx-line,#d9d9d9);border-top-color:var(--fx-accent,#bb9650);border-radius:50%;animation:fm-ptr-spin .75s linear infinite;flex-shrink:0}
+@keyframes fm-ptr-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.fm .fm-ptr-spinner{animation:none}}

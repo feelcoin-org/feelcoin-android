@@ -419,6 +419,13 @@ async fn mobile_chain_request(path: String, method: String, body: Option<Value>)
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            #[cfg(target_os = "android")]
+            app.handle().plugin(tauri_plugin_barcode_scanner::init())?;
+            #[cfg(not(target_os = "android"))]
+            let _ = app;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             network_defaults,
             daemon_info,

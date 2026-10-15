@@ -4,48 +4,47 @@
   <a href="https://feelcoin.org"><img src="https://feelcoin.org/assets/feelcoin-logo-v2.png" alt="Official Feelcoin logo" width="144"></a>
 </p>
 
-**Official Feelcoin (FEEL) Android wallet — Public Beta**
+**Official Feelcoin (FEEL) Android wallet — v0.3.0 Stable**
 
-**Version:** v0.2.0 Beta · **Network:** Feelcoin Mainnet · **Platform:** Android
+**Version:** [v0.3.0](https://github.com/feelcoin-org/feelcoin-android/releases/tag/v0.3.0) · **Network:** Feelcoin Mainnet · **Platform:** Android ARM64
 
-> **Beta notice:** This wallet is experimental and has not undergone an independent security audit. Start with small amounts and securely back up your recovery seed offline. Never share your seed, private keys, or wallet password.
+> **Safety:** The stable designation reflects successful functional device testing; it is **not** an independent security audit. Back up your recovery seed securely offline; never share seeds, passwords or private keys. Start with a small transfer. Android Keystore integration and additional recovery/security validation remain outstanding.
 
 ## Download and install
 
-**[Download the latest Android Beta APK from GitHub Releases](https://github.com/feelcoin-org/feelcoin-android/releases)**
+**[Download the official Android v0.3.0 APK](https://github.com/feelcoin-org/feelcoin-android/releases/download/v0.3.0/Feelcoin-Android-v0.3.0.apk)** · [Release notes](https://github.com/feelcoin-org/feelcoin-android/releases/tag/v0.3.0) · [SHA-256 checksums](https://github.com/feelcoin-org/feelcoin-android/releases/download/v0.3.0/SHA256SUMS.txt)
 
-1. Open the Releases page and choose the latest Android Beta release.
-2. Download the signed `.apk` and the accompanying `SHA256SUMS.txt`.
-3. Verify the APK checksum (on Linux: `sha256sum -c SHA256SUMS.txt` from the download directory).
-4. Install the APK on your Android device. Android may ask for permission to install from the app you used to open the APK.
-5. Create a new wallet or restore an existing FEEL wallet, and **back up your seed securely offline**.
+1. Download the signed APK and `SHA256SUMS.txt` from the same release.
+2. Verify the APK SHA-256 against the published checksum.
+3. Open the APK on a supported Android ARM64 device and follow the installation prompts.
+4. If upgrading Beta 3, **install over the existing app** without uninstalling or clearing app data; the package identifier and release signing certificate remain the same.
+5. Confirm your wallet and synchronization, and retain an independent offline seed backup.
 
-**Updates:** Install new versions from official releases. Do not uninstall or clear existing wallet app data unless you have verified your recovery backup. APK upgrades require a compatible signing certificate.
+**Package:** `org.feelcoin.wallet` · **versionCode:** `3000` · **APK SHA-256:** `9bc228d5e2cacd472a71f5d6bb08ef8c9c2f590d3ea90cc641b2dced38e3a3e9`.
 
-## Beta features
+## Wallet features
 
-- Create and recover FEEL wallets.
-- Password-encrypted local wallet storage and on-device key generation.
-- Send and receive FEEL; sign transactions on the device.
-- Synchronize blockchain balances and transaction history using official Feelcoin network services.
-- Show received and sent transactions with FEEL amounts and transaction hashes.
-- Manual wallet refresh and synchronization status.
-- Read-only mining pool statistics: hashrate, workers, unpaid balance and historical payouts.
-- Blockchain explorer and network information.
-- Dark, Light and System appearance options.
+- Create, open and recover locally encrypted FEEL wallets.
+- Sign transactions on-device; send and receive FEEL.
+- Receive-address QR display, QR camera scanning (with permissions) and gallery-based QR reading.
+- Live wallet synchronization, balance and transaction history from Feelcoin network services.
+- Mining pool statistics, block explorer and network information.
+- Light, Dark and device-driven themes.
 
-The Android wallet does **not** require running a local blockchain daemon or miner.
+The Android app uses official remote blockchain services; it does **not** run a local mining process or require a local full node.
 
 ## Security and limitations
 
-- **Self-custody:** Wallet creation, recovery and signing run locally on your device. Protect your recovery seed.
-- **Remote services:** Blockchain data and transaction submission use Feelcoin network services. Network connectivity does not guarantee that the wallet has fully synchronized.
-- **Beta software:** Features have undergone device testing, but reliability, recovery, transaction handling and security still need broader validation.
-- **Small transfers first:** Verify the destination and fee before sending. Confirm transfers through the explorer.
-- **Privacy:** Do not post seeds, private keys, passwords or sensitive wallet diagnostic data in public issues.
-- **No security audit:** Do not use this beta as the sole storage for substantial funds.
+- **Self custody:** Your seed and spend keys must remain private and backed up offline.
+- **Network status is not wallet synchronization:** Check that the wallet has synchronized before relying on displayed balances.
+- **No independent audit claimed:** Additional security analysis and full recovery validation remain ongoing.
+- **Android Keystore:** Not yet integrated; use a strong device and wallet password.
+- **Test small amounts first:** Verify recipient and network fee before a larger transaction.
+- Report bugs without private keys, passwords, recovery seeds or sensitive wallet logs.
 
-Please report reproducible issues on [GitHub Issues](https://github.com/feelcoin-org/feelcoin-android/issues), without including wallet secrets.
+Feedback: [Android wallet GitHub Issues](https://github.com/feelcoin-org/feelcoin-android/issues).
+
+**Source provenance:** v0.3.0 device-tested APK was built from [the stable-candidate revision](https://github.com/feelcoin-org/feelcoin-android/tree/719efaf413df0b17ebb678801e976cbf770ab8ef). The default `main` branch may contain development changes.
 
 ## For developers
 
@@ -68,7 +67,7 @@ The Android release APK produced by the build process is unsigned until signed w
 - [Feelcoin desktop wallet — Windows & Linux](https://github.com/feelcoin-org/feelcoin-desktop)
 - [Official mining pool](https://pool.feelcoin.org)
 - [Block explorer](https://explorer.feelcoin.org)
-- [Android Beta releases](https://github.com/feelcoin-org/feelcoin-android/releases)
+- [Android Stable release v0.3.0](https://github.com/feelcoin-org/feelcoin-android/releases/tag/v0.3.0)
 
 **License:** See [LICENSE](LICENSE).
 

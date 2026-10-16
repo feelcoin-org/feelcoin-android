@@ -382,36 +382,72 @@ fn mobile_open_link(app: tauri::AppHandle, url: String) -> Result<(), String> {
 // Strict, read-only blockchain requests, plus explicit signed-transaction relay.
 // Private wallet material is never accepted by this API.
 #[tauri::command]
-async fn mobile_chain_request(path: String, method: String, body: Option<Value>) -> Result<Value, String> {
+async fn mobile_chain_request(
+    path: String,
+    method: String,
+    body: Option<Value>,
+) -> Result<Value, String> {
     const BASE: &str = "https://wallet.feelcoin.org";
     let is_get = method == "GET";
     let is_post = method == "POST";
     let permitted = if is_get {
-        path == "/api/health" || path == "/api/chain/fee" ||
-        path == "/api/chain/output-distribution" ||
-        path.starts_with("/api/chain/blocks?start=") && path.bytes().all(|c| c.is_ascii_alphanumeric() || b"/=?&".contains(&c)) ||
-        path.starts_with("/api/chain/block/") && path[17..].bytes().all(|c| c.is_ascii_digit())
+        path == "/api/health"
+            || path == "/api/chain/fee"
+            || path == "/api/chain/output-distribution"
+            || path.starts_with("/api/chain/blocks?start=")
+                && path
+                    .bytes()
+                    .all(|c| c.is_ascii_alphanumeric() || b"/=?&".contains(&c))
+            || path.starts_with("/api/chain/block/")
+                && path[17..].bytes().all(|c| c.is_ascii_digit())
     } else if is_post {
-        matches!(path.as_str(), "/api/chain/transactions" | "/api/chain/outs" |
-            "/api/chain/key-images-spent" | "/api/chain/mix-outs" |
-            "/api/chain/validate" | "/api/chain/broadcast-live")
-    } else { false };
-    if !permitted || path.len() > 150 { return Err("Blocked blockchain API request".into()); }
+        matches!(
+            path.as_str(),
+            "/api/chain/transactions"
+                | "/api/chain/outs"
+                | "/api/chain/key-images-spent"
+                | "/api/chain/mix-outs"
+                | "/api/chain/validate"
+                | "/api/chain/broadcast-live"
+        )
+    } else {
+        false
+    };
+    if !permitted || path.len() > 150 {
+        return Err("Blocked blockchain API request".into());
+    }
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(120))
         .redirect(reqwest::redirect::Policy::none())
-        .build().map_err(|_| "Wallet network unavailable".to_string())?;
-    let request = if is_get { client.get(format!("{BASE}{path}")) }
-                  else { client.post(format!("{BASE}{path}")).json(&body.unwrap_or(json!({}))) };
-    let response = request.send().await.map_err(|_| "Wallet blockchain API unavailable".to_string())?;
+        .build()
+        .map_err(|_| "Wallet network unavailable".to_string())?;
+    let request = if is_get {
+        client.get(format!("{BASE}{path}"))
+    } else {
+        client
+            .post(format!("{BASE}{path}"))
+            .json(&body.unwrap_or(json!({})))
+    };
+    let response = request
+        .send()
+        .await
+        .map_err(|_| "Wallet blockchain API unavailable".to_string())?;
     if !response.status().is_success() {
-        return Err(format!("Wallet blockchain API HTTP {}", response.status().as_u16()));
+        return Err(format!(
+            "Wallet blockchain API HTTP {}",
+            response.status().as_u16()
+        ));
     }
     if response.content_length().is_some_and(|n| n > 12_000_000) {
         return Err("Wallet API response exceeds limit".into());
     }
-    let bytes = response.bytes().await.map_err(|_| "Unable to read blockchain response".to_string())?;
-    if bytes.len() > 12_000_000 { return Err("Wallet API response exceeds limit".into()); }
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|_| "Unable to read blockchain response".to_string())?;
+    if bytes.len() > 12_000_000 {
+        return Err("Wallet API response exceeds limit".into());
+    }
     serde_json::from_slice(&bytes).map_err(|_| "Invalid blockchain API JSON".to_string())
 }
 

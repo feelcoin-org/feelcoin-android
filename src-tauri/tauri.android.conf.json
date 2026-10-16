@@ -6,10 +6,10 @@
       "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'"
     }
   },
-  "version": "0.2.0-beta.3",
+  "version": "0.3.0",
   "bundle": {
     "android": {
-      "versionCode": 2002
+      "versionCode": 3000
     }
   }
 }

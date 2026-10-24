@@ -1,6 +1,6 @@
 [package]
 name = "feelcoin-desktop"
-version = "0.3.0"
+version = "1.0.0"
 description = "Official Feelcoin desktop wallet"
 authors = ["Feelcoin contributors"]
 edition = "2021"

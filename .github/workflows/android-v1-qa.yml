@@ -1,0 +1,123 @@
+name: Feelcoin Android v1.0.0 ARM64 QA candidate
+on:
+  push:
+    branches: [release/android-v1.0.0-qa]
+    paths: ['.github/workflows/android-v1-qa.yml', 'src/**', 'src-tauri/**', 'package.json', 'scripts/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm64-qa:
+    name: Android v1.0 QA separate APK (not production signed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+      - name: Prepare NDK
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          if [ -d "$ANDROID_NDK_LATEST_HOME" ]; then
+            echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+            echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          else
+            "$SDKMANAGER" --install "ndk;27.2.12479018"
+            echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+            echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          fi
+      - name: Check fork boundary and official package identity
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-v17-boundary.ts
+          python3 - <<'PY'
+          import json,pathlib
+          d=json.loads(pathlib.Path('src-tauri/tauri.android.conf.json').read_text())
+          assert d['identifier']=='org.feelcoin.wallet'
+          assert d['version']=='1.0.0'
+          assert d['bundle']['android']['versionCode']==10000
+          print('PASS: Production package name and versionCode are correct')
+          PY
+      - name: Install JS dependencies
+        run: npm install
+      - uses: actions/checkout@v4
+        with:
+          repository: feelcoin-org/feelcoin-web-wallet
+          ref: 4cbbbdd5ea5de120ecbc8de5e57410b5b11462a5
+          path: wallet-source
+          persist-credentials: false
+      - name: Verify exact official wallet WASM engine and offline wallet recovery
+        run: |
+          set -euo pipefail
+          js=wallet-source/public/wasm/MyMoneroCoreCpp_WASM.js
+          wasm=wallet-source/public/wasm/MyMoneroCoreCpp_WASM.wasm
+          test "$(git hash-object "$js")" = 425cdbefeba8d46afc7c7d7d8c2e518c023ccd07
+          test "$(git hash-object "$wasm")" = 1cec3548d6e83cc70bbb2f21009d07711cbc5194
+          node scripts/prepare-android-wallet-core.cjs
+          timeout 70s node scripts/smoke-android-wallet-core.cjs
+          npm run build
+          test -s dist/wallet-core/MyMoneroCoreCpp_WASM.wasm
+      - name: Initialize Android and official icon
+        run: |
+          set -euo pipefail
+          npx tauri android init --ci
+          npx tauri icon public/feelcoin-logo.png --fit contain
+      - name: Set isolated debug QA app identity on runner only
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('src-tauri/tauri.android.conf.json')
+          d=json.loads(p.read_text())
+          assert d['identifier']=='org.feelcoin.wallet'
+          d['identifier']='org.feelcoin.wallet.qa'
+          p.write_text(json.dumps(d,indent=2)+'\n')
+          print('Isolated debug QA identity:',d['identifier'])
+          PY
+      - name: Build Android ARM64 v1.0 debug QA APK
+        run: npx tauri android build --debug --apk --target aarch64
+      - name: Inspect actual QA APK and compute SHA256
+        run: |
+          set -euo pipefail
+          mkdir -p android-v1-qa
+          apk="$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' -print -quit)"
+          test -s "$apk"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
+          test -x "$AAPT"
+          "$AAPT" dump badging "$apk" > android-v1-qa/APK-METADATA.txt
+          grep -Fq "name='org.feelcoin.wallet.qa'" android-v1-qa/APK-METADATA.txt
+          grep -Fq "versionCode='10000'" android-v1-qa/APK-METADATA.txt
+          unzip -Z1 "$apk" > android-v1-qa/APK-CONTENTS.txt
+          grep -Fq 'lib/arm64-v8a/' android-v1-qa/APK-CONTENTS.txt
+          if grep -Ei '(^|/)(feelcoind|feelcoin-wallet-rpc)(\.exe)?$|\.dll$|\.AppImage$|\.deb$' android-v1-qa/APK-CONTENTS.txt; then
+            echo 'Unexpected Windows/Linux Desktop Core inside APK'; exit 1
+          fi
+          cp "$apk" android-v1-qa/Feelcoin-Android-v1.0.0-ARM64-QA.apk
+          (cd android-v1-qa && sha256sum Feelcoin-Android-v1.0.0-ARM64-QA.apk > SHA256SUMS.txt)
+          printf '%s\n' 'Android v1.0 QA APK is NOT a production release.' \
+            'Debug-signed org.feelcoin.wallet.qa installs separately from signed org.feelcoin.wallet.' \
+            'Test with disposable wallets only. Never uninstall or clear original wallet data.' \
+            'Final release must use the original signing certificate.' > android-v1-qa/README-QA.txt
+          echo 'PASS: ARM64 isolated Android v1.0 APK audited'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: feelcoin-android-v1.0.0-arm64-QA-debug
+          path: android-v1-qa/*
+          if-no-files-found: error
+          retention-days: 14

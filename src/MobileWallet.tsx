@@ -4,6 +4,7 @@ import { scan as scanBarcode, requestPermissions, Format } from "@tauri-apps/plu
 import jsQR from "jsqr";
 import * as QRCode from "qrcode";
 import { parseFeelcoinQr } from "./feelcoinQr";
+import { walletForkVersionForChainHeight } from "./feelcoinFork";
 import { syncPercent, syncRate, syncRemaining, syncEta, formatSyncEta, type SyncSample } from "./walletSyncMetrics";
 import { loadScanCheckpoint, saveScanCheckpoint } from "./walletScanStorage";
 import { selectedKeyImages, type SignInput } from "./walletSelectedInputs";
@@ -319,7 +320,8 @@ export default function MobileWallet() {
           setProgress(null);
         }
         window.FeelcoinAndroidChainRequest=(path,method,body)=>invoke("mobile_chain_request",{path,method,body});
-        window.FEELCOIN_NETWORK=Object.freeze({forkVersion:16,targetSeconds:120,spendableAge:10,maxBlockNumber:500000000,unlockDeltaBlocks:1,unlockDeltaSeconds:120});
+        // Keep v16 signing before activation. Verified scan updates forkVersion after the fork.
+        window.FEELCOIN_NETWORK=Object.freeze({forkVersion:walletForkVersionForChainHeight(0),targetSeconds:120,spendableAge:10,maxBlockNumber:500000000,unlockDeltaBlocks:1,unlockDeltaSeconds:120});
         coreRef.current=await feelcoinCore();
         if(!isCurrent())return false;
         window.FeelcoinWalletRuntime={getWallet:()=>walletRef.current,getCore:()=>coreRef.current};
@@ -404,6 +406,11 @@ export default function MobileWallet() {
             throw new Error("INVALID_SCAN_HEIGHT");
           }
           scanRef.current=result;
+          // Only an independently verified scan of [0,chainHeight) can enable v17 signing.
+          if (result.verified === true && result.scannedHeight >= result.chainHeight) {
+            window.FEELCOIN_NETWORK=Object.freeze({...window.FEELCOIN_NETWORK,
+              forkVersion: walletForkVersionForChainHeight(result.chainHeight)});
+          }
           const wasSaved=result.fastPath===true && durableVerified;
           // A confirmed unchanged chain does not require re-writing the
           // same large checkpoint to IndexedDB every thirty seconds.

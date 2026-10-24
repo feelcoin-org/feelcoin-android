@@ -73,11 +73,6 @@ jobs:
           timeout 70s node scripts/smoke-android-wallet-core.cjs
           npm run build
           test -s dist/wallet-core/MyMoneroCoreCpp_WASM.wasm
-      - name: Initialize Android and official icon
-        run: |
-          set -euo pipefail
-          npx tauri android init --ci
-          npx tauri icon public/feelcoin-logo.png --fit contain
       - name: Set isolated debug QA app identity on runner only
         run: |
           set -euo pipefail
@@ -90,6 +85,11 @@ jobs:
           p.write_text(json.dumps(d,indent=2)+'\n')
           print('Isolated debug QA identity:',d['identifier'])
           PY
+      - name: Initialize Android and official icon
+        run: |
+          set -euo pipefail
+          npx tauri android init --ci
+          npx tauri icon public/feelcoin-logo.png --fit contain
       - name: Build Android ARM64 v1.0 debug QA APK
         run: npx tauri android build --debug --apk --target aarch64
       - name: Inspect actual QA APK and compute SHA256
